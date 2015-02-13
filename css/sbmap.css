@@ -1,0 +1,232 @@
+	html, body, #sbmap, #map {
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		background-color: #000;
+		color:#fff;
+		font-family: 'Open Sans', sans-serif;
+	}
+	#sbmap .title {
+		position: fixed;
+		top: 20px;
+		left: 20px;
+		font-size: 25px;
+	}
+	.invisible {
+		display: none;
+	}
+	.sliderWrapper {
+		position: fixed;
+		bottom: 16px;
+		left: 10%;
+		width: 80%;
+		height: 100px;
+		z-index: 1000;
+	}	
+	.playButton {
+		position: absolute;
+		top: 36px;
+		left: 0px;
+		height: 25px;
+		z-index: 1000;
+		width: 4%;
+		color: #fff;
+		font-size: 40px;
+		line-height: 70px;
+		cursor: pointer;
+		text-align: right;
+	}
+	#legend {
+		position: absolute;
+		top: 36px;
+		right: 0;
+		width: 19%;
+		height: 64px;
+		z-index: 1000;
+		background-color: rgba(50,50,50,0.8);
+		border-radius: 3px;
+	}
+	.timelineWrapper {
+		position: absolute;
+		left: 5%;
+		width: 75%;
+		height: 100px;		
+	}
+	.timelineBack {
+		position: absolute;
+		left: 0;
+		top: 36px;
+		width: 100%;
+		height: 64px;
+		z-index: 0;
+		background-color: rgba(50,50,50,0.8);
+		border-radius: 3px;
+	}	
+	div.timeline {
+		top: 0px;
+		position: absolute;
+		z-index: 100;
+	}
+	.dragdealer {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100px;
+		z-index: 10;
+	}	
+	.dragdealer .handle {
+		position: absolute;
+		top: 36px;
+		left: 0;
+		cursor: pointer;
+		width: 80px;
+		height: 64px;
+		background: rgba(255,255,255,0.5);
+		color: #444;
+		text-align: center;
+		border-radius: 3px;
+		z-index: 10000;
+		text-shadow: 0 0 0.2em #777,0 0 0.3em #777,0 0 0.4em #777,0 0 0.5em #777;
+	}
+	.dragdealer .handle .score{
+		width: 100%;
+		height: 50%;
+		line-height: 45px;
+		font-size: 20px;
+		color: #fff;
+		font-weight: 700;
+	}
+	.dragdealer .handle .time {
+		width: 100%;
+		height: 50%;
+		font-size: 13px;
+		line-height: 35px;
+		color: #fff;
+	}
+	.dragdealer .handle.all .time {
+		color: #444;
+	}
+	.dragdealer .handle.all {
+		background: #fff;
+		text-shadow: none;
+	}
+	.dragdealer .disabled {
+		background: #898989;
+	}
+	.template {
+		display: none;
+	}
+	.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+		background-color: rgba(64,64,64,0.7);
+	}
+	.leaflet-popup .name {
+		font-size:18px;
+		color: #fff;
+	}
+	.leaflet-popup .type {
+		font-size:12px;
+		color: #aaa;
+	}
+	.leaflet-popup .text {
+		font-size:12px;
+		color: #fff;
+	}
+	.timeline .line {
+		stroke-width: 1px;
+		fill: none;
+	}
+	#timeline line {
+		stroke-width: 0.5px;
+		stroke: #aaa;
+	}
+	#timeline circle {
+		fill: none;
+		stroke: #999;
+		stroke-width:2px;
+	}
+	.timeline .line.hawks, .score .hawks, #timeline .hawks circle, .title .hawks  {
+		stroke: #d62;
+		color: #d62;
+	}
+	.timeline .line.patriots, .score .patriots, #timeline .patriots circle, .title .patriots {
+		stroke: #2d6;
+		color: #2d6;
+	}
+	#timeline text {
+		opacity: 1;
+		fill: #aaa;
+		font-size: 13px;
+		font-weight: 700;
+		text-anchor: middle;
+		text-shadow: 0 0 0.2em #000,0 0 0.3em #000,0 0 0.4em #000,0 0 0.5em #000,0 0 0.6em #000;
+	}
+	#timeline .hidden text {
+		visibility: hidden;
+		opacity: 0;
+		transition: visibility 0s 1.5s, opacity 1.5s ease-in-out;
+		/*
+		animation: animationEvents 5s ease-out;
+		-moz-animation: animationEvents 5s ease-out;
+		-webkit-animation: animationEvents 5s ease-out;
+		-o-animation: animationEvents 5s ease-out;
+		*/
+	}
+	#timeline .active text {
+		visibility: visible;
+		opacity: 1;
+		/*
+		animation: animationEvents 5s ease-out;
+		-moz-animation: animationEvents 5s ease-out;
+		-webkit-animation: animationEvents 5s ease-out;
+		-o-animation: animationEvents 5s ease-out;
+		*/
+	}
+	#timeline .small circle {
+		transform: scale(0.64);
+	}
+	#legend .other {
+		fill: #aaa;
+	}
+	#legend {
+		font-size: 13px;
+	}
+	#legend .team {
+		text-anchor: end;
+	}
+	#map .dot {
+		opacity:0.1;
+		stroke: none;
+		fill: #aaa;
+	}
+	#map .dot.hawks, #legend .hawks, #timeline .hawks text {
+		fill: #d62;
+	}
+	#map .dot.patriots, #legend .patriots, #timeline .patriots text  {
+		fill: #2d6;
+	}
+	#timeline text.time {
+		fill:#aaa;
+	}
+	#map .anima {
+		transform-origin: 50% 50%;
+		animation: animation 1s ease-in;
+		-moz-animation: animation 1s ease-in;
+		-webkit-animation: animation 1s ease-in;
+		-o-animation: animation 1s ease-in;
+	}
+	@keyframes animation { 0% {opacity:0;transform:scale(0);} 50% {opacity:1;transform:scale(2);} 100% {opacity:0.1;transform:scale(1);} }
+	@-moz-keyframes animation { 0% {opacity:0;transform:scale(0);} 50% {opacity:1;transform:scale(2);} 100% {opacity:0.1;transform:scale(1);} }
+	@-webkit-keyframes animation { 0% {opacity:0;transform:scale(0);} 50% {opacity:1;transform:scale(2);} 100% {opacity:0.1;transform:scale(1);} }
+	@-o-keyframes animation { 0% {opacity:0;transform:scale(0);} 50% {opacity:1;transform:scale(2);} 100% {opacity:0.1;transform:scale(1);} }
+	#map .dotsAll {
+		opacity:0.7;
+		animation: animationAll 1s ease-in;
+		-moz-animation: animationAll 1s ease-in;
+		-webkit-animation: animationAll 1s ease-in;
+		-o-animation: animationAll 1s ease-in;
+	}
+	@-moz-keyframes animationAll { 0% {opacity:0.1;} 100% {opacity:0.7;} }
+	@-webkit-keyframes animationAll { 0% {opacity:0.1;} 100% {opacity:0.7;} }
+	@-o-keyframes animationAll { 0% {opacity:0.1;} 100% {opacity:0.7;} }
+	@keyframes animationAll { 0% {opacity:0.1;} 100% {opacity:0.7;} }

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<link rel="stylesheet" href="css/pace.css" type='text/css' />
+	<link rel="stylesheet" href="css/leaflet.css" type='text/css' />
+	<link rel="stylesheet" href="css/sbmap.css" type='text/css' />
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+</head>
+<body>
+
+<div id='sbmap'>
+	<div id='map'></div>
+	<div class="sliderWrapper">
+		<div class='playButton'>▶</div>
+		<div class='timelineWrapper'>
+			<div class="timelineBack"></div>
+			<div id='slider' class="dragdealer active">
+				<div class='handle'>
+					<div class = 'score'><span class = 'hawks'>0</span> | <span class = 'patriots'>0</span></div>
+					<div class = 'time'></div>
+				</div>
+				<div class="timeline"></div>
+			</div>
+		</div>
+		<div id="legend"></div>
+	</div>
+	<div id='popup' class='template'>
+		<span class='name'>{{name}}</span><br/>
+		<span class='type'>{{type}}, {{followers}} followers</span><br/>
+		<span class='text'>{{text}}</span>
+	</div>
+	<div class='title'>
+		#sb49 <span class="patriots">Patriots</span> vs <span class="hawks">Seahawks</span> @UOPStadium
+	</div>
+</div>
+
+<script src="js/vendor/pace.js"></script>
+<script src="js/vendor/d3.v3.js"></script>
+<script src="js/vendor/leaflet0.8.js"></script>
+<script src="js/vendor/dragdealer.js"></script>
+<script src="js/sbmap.js"></script>
+
+<script>
+
+</script>
+</html>
