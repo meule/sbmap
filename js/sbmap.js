@@ -294,6 +294,7 @@
 			timelineEvents.classed('hidden',1);
 			if (eventsMap[step]) {
 				eventsMap[step].g.classed('hidden', 0);
+				slow = 5;
 				console.log(step, eventsMap[step])
 			}
 
@@ -329,14 +330,16 @@
 			playButton.text(isActive ? '❚❚ ' : '▶')
 		}
 		// play mode
+		var slow = 0;
 		function play(isPlay){
 			if (!isPlay || !playing) {
 				playing = false;
 			} else {
+				if (slow) slow--;
 				curStep = slider.getStep()[0];
 				if (curStep != numOfPeriods.minute) {
 					slider.setStep(curStep + 1);
-					setTimeout( function() { play(1); }, 50);
+					setTimeout( function() { play(1); }, 100);
 				} else 
 					playClick();
 			}

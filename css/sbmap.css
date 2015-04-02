@@ -146,12 +146,12 @@
 		stroke-width:2px;
 	}
 	.timeline .line.hawks, .score .hawks, #timeline .hawks circle, .title .hawks  {
-		stroke: #d62;
-		color: #d62;
+		stroke: #69BE28;
+		color: #69BE28;
 	}
 	.timeline .line.patriots, .score .patriots, #timeline .patriots circle, .title .patriots {
-		stroke: #2d6;
-		color: #2d6;
+		stroke: #C60C30;
+		color: #C60C30;
 	}
 	#timeline text {
 		opacity: 1;
@@ -200,10 +200,10 @@
 		fill: #aaa;
 	}
 	#map .dot.hawks, #legend .hawks, #timeline .hawks text {
-		fill: #d62;
+		fill: #69BE28;
 	}
 	#map .dot.patriots, #legend .patriots, #timeline .patriots text  {
-		fill: #2d6;
+		fill: #C60C30;
 	}
 	#timeline text.time {
 		fill:#aaa;
