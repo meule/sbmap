@@ -1,0 +1,19 @@
+{
+  "map": [
+    ["precise_location", "_source.precise_location"],
+    ["date", "_source.story_date"],
+    ["lat", "_source.location.lat"],
+    ["lon", "_source.location.lon"],
+    ["_source", "_source.source"],
+    ["image_features", "_source.image_features"],
+    ["hashtags", "_source.hashtags"],
+    ["text", "_source.text"],
+    ["has_photo", "_source.has_photo"],
+    ["name", "_source.profile.name"],
+    ["screen_name", "_source.profile.screen_name"],
+    ["follower_count", "_source.profile.follower_count"],
+    ["sentiments", "sentiments"],
+    ["imageUrl", "imageUrl"]
+  ],
+  "collection": "stories"
+}
