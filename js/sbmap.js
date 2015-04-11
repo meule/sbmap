@@ -1,124 +1,100 @@
 (function sbmap(){
-	var  dots = []
-		// hashtags for each team
-		,hashtags = {
-			hawks: ["seahawks","gohawks","seattle","12thman","goseahawks","weare12","seattleseahawks","12s","12","hawks","twelfie","tb12","beastmode"]
-			,patriots: ["patriots","patriots","patsnation","doyourjob","pats","newengland","newenglandpatriots","patriotsnation","gopatriots","finishthejob","tombrady","brady"]
-		}
-		,layers = ['hawks','patriots','other']
-		// time frame 
-		,startDate = new Date('2015-02-01T17:00:00+00:00')
-		,endDate = new Date('2015-02-02T01:15:00+00:00');
+	// just for debug
+	var timeCorrection = window.location.hash.substr(1) || 0;
 
-	// load data. It's better to change data format to csv to reduce loading time
-	d3.json('data/super_bowl_output.json', function(error, data){
-		var isTags, team;
-
-		data.stories.forEach(function(d){
-			if (d._source.precise_location) {
-				// create new array for dots
-				var date = new Date(d._source.story_date);
-				if ( date > startDate && date < endDate ) {
-					// find team by hashtags
-					isTags = {}
-					for (h in hashtags)
-						isTags[h] = false;
-					team = 'other';
-					d._source.hashtags && d._source.hashtags.forEach(function(m){
-						for (h in hashtags)
-							if (hashtags[h].indexOf(m) != -1)
-								isTags[h] = true;
+		// config from sbconfig.js
+		// time format for slider handle
+	var  hashtags = sbconfig.hashtags
+		,startDate = moment(sbconfig.startDate)
+		,endDate = moment(sbconfig.endDate)
+		,timezone = sbconfig.timezone
+		,sliderPeriod = sbconfig.sliderPeriod
+		,chartsPeriod = sbconfig.chartsPeriod
+		,events = sbconfig.events
+		,sourceNames = { 'i': 'Instagram', 't': 'Twitter', 'o': 'Other'} // sources were trimmed in data_process.py to optimize data size
+		,layers = ['team1', 'team2', 'team3'] // for css, team3 means not any team
+		,title = '#' + sbconfig.eventName + ' <span class="team1">' + sbconfig.teamNames[0] + '</span> vs <span class="team2">' + sbconfig.teamNames[1] + ' </span>@' + sbconfig.stadiumName
+		,colors = sbconfig.teamColors
+		,scheet = window.document.styleSheets[window.document.styleSheets.length-1]
+		,formatTime = function(date){ return moment(date).utc().add(timezone,'hours').format("h:mma");}
+	// add title
+	d3.select('.title').html(title);
+	// add team colors to css
+	colors.forEach(function(c, i){
+		scheet.insertRule('.team' + (i+1) + ', .team' + (i+1) + ' *  {stroke:' + c + ';fill:' + c + '; color:' + c + ';}', 0);
+	})
+	// data loading
+	d3.csv('data/data.csv', function(error, data){
+		var team, teams, dots = [];
+		data.forEach(function(d){ d.date = moment(d.date).add(timeCorrection, 'hours'); });
+		data.sort(function(a,b){ return a.date.valueOf() - b.date.valueOf(); });
+		data.forEach(function(d){
+			// create new array for dots
+			if ( d.date > startDate && d.date < endDate ) {
+				// find team by hashtags
+				team = 2; // 2 means not any team
+				teams = [];
+				if (d.hashtags) {
+					d.hashtags = JSON.parse(d.hashtags.replace(/'/g,'"').replace(/\\x../g,'?'));
+					hashtags.forEach(function(hs,i){
+						hs.forEach(function(tag){
+							if (d.hashtags.indexOf(tag) != -1)
+								teams[team = i] = true;
+						})
 					})
-					for (h in hashtags)
-						if (isTags[h])
-							team = team == 'other' ? h : 'other';
-					dots.push({
-						 lat: +d._source.location.lat
-						,lon: +d._source.location.lon
-						,team: team
-						,followers: +d._source.profile.follower_count
-						,utime: d._source.story_date
-						,time: date
-						,name: d._source.profile.name || d._source.screen_name
-						,text: d._source.text || ''
-						,type: d._source.source || '' 
-					})				
+					if (teams[0] && teams[1]) team = 2; // no team if both team hashtags were found
 				}
+				// otherwise find team name in text in the same way
+				if (d.text && team == 2) {
+					hashtags.forEach(function(hs,i){
+						hs.forEach(function(tag){
+							if (d.text.toLowerCase().indexOf(tag) != -1)
+								teams[team = i] = true;
+						})
+					})
+					if (teams[0] && teams[1]) team = 2;
+				}
+				dots.push({
+					 lat: +d.lat
+					,lon: +d.lon
+					,team: team
+					,followers: +d.follower_count || 1
+					,textDate: formatTime(d.date)
+					,time: d.date
+					,sliderPeriod: Math.floor ((d.date - startDate) / sliderPeriod) // period index for each dot
+					,chartsPeriod: Math.floor ((d.date - startDate) / chartsPeriod)
+					,sentiments: +d.sentiments
+					,name: d.name || d.screen_name || ''
+					,text: d.text || ''
+					,type: sourceNames[d._source || 'o']
+					,imageUrl: d.imageUrl
+				})				
 			}
 		})
-
-		makeMap();
+		// sort dots to show on top those that have team hashtag
+		dots.sort(function(a,b){ return a.team == 2 ? -1 : 1; });
+		makeMap(dots);
 	})
 
-
-	function makeMap() {
-		var playing = false
-			,timezone = 0 
-			,times = d3.extent(dots, function(d){ return d.time; }) // time bounds from data
-			,startMinute = 60 * times[0].getUTCHours() + times[0].getUTCMinutes();
-
-		// start dates floored to the nearest time rounded by selected period
-		var periods = { minute: 60*1000, quarter: 15*60*1000, hour: 60*60*1000, day: 24*60*60*1000 }
-			,numOfPeriods = {}
-			,startTimeByPeriod = {}
+	function makeMap(dots) {
+		console.log(dots)
+		var  playing = false
+			,numOfPeriods = Math.ceil((endDate - startDate) / sliderPeriod )
 			,dotsByPeriod = {}
-
-		for (period in periods) {
-			numOfPeriods[period] = Math.ceil((times[1]-times[0])/periods[period] );
-			startTimeByPeriod[period] = new Date (times[0] - times[0] % periods[period]);
-			dotsByPeriod[period] = {};
-		}
-		// events timeline and scores
-		var  events = [
-				 { time: "18:15", type: "gameTimes", score: '0:0', text: 'Start' }
-				,{ time: "18:30", type: "kickoff" }
-				,{ time: "19:03", type: "quarter small", text: "2nd Quarter" }
-				,{ time: "19:13", type: "touchdown", team: "patriots", score: "7:0" }
-				,{ time: "19:36", type: "touchdown", team: "hawks", score: "7:7" }
-				,{ time: "19:49", type: "touchdown", team: "patriots", score: "14:7" }
-				,{ time: "19:59", type: "touchdown", team: "hawks", score: "14:14" }
-				,{ time: "20:11", type: "halftimestart small" }
-				,{ time: "20:32", type: "halftimeend small" }
-				,{ time: "20:38", type: "fieldgoal", team: "hawks", score: "14:17" }
-				,{ time: "20:54", type: "touchdown", team: "hawks", score: "14:24" }
-				,{ time: "21:14", type: "quarter small", text: "4nd Quarter" }
-				,{ time: "21:28", type: "touchdown", team: "patriots", score: "21:24" }
-				,{ time: "21:48", type: "touchdown", team: "patriots", score: "28:24" }
-				,{ time: "22:01", type: "interception", team: "patriots", text: "@Mac_BZ INTERCEPTION" }
-				,{ time: "22:04", type: "gameTimes", text: 'End' }
-			]
 			,eventsMap = {}
-			,scores = [];
-
-		events.forEach(function(e){ 
-			e.ftime = new Date( startTimeByPeriod.day.valueOf() + (+e.time.split(':')[0]) * 60*60*1000 + (+e.time.split(':')[1]) * 60*1000 );
-			console.log(e.time, e.ftime)
-			e.minute = Math.floor ((e.ftime - startTimeByPeriod.minute) / periods.minute); 
-			e.score && scores.push(e);
-			eventsMap[e.minute] = e;
-		});
-
-		// calch each dot rounded time 
-		dots.forEach(function(dot){
-			for (period in periods)
-				dot[period] = Math.floor ((dot.time - startTimeByPeriod[period]) / periods[period]);
-		})
-
-		// define circles size scale function (by num of followers)
-		//var domain = [0,d3.max(dots, function(d){ return +d.followers; })];
-		// use custom max extent to make all the bubbles not smallest size if there is a profile with follower=10000000 
-		var domain = [0,100000]
+			,scores = []
+			,dots4chart = { vol: { 0: {}, 1: {} }, sent: { 0: {}, 1: {} }, total: {} }
+			,i
+			// scale for dot radius. use custom max extent to make all the bubbles not smallest size if there is a profile with follower=10000000 or so
+			,domain = [1,Math.max(100000, d3.max(dots, function(d){ return d.followers; }))]
 			,radius = d3.scale.sqrt()
 				.range([2,10]) // circle min and max size in px
 				.domain(domain)
 				.clamp(1);
-
 		// create leaflet map
-		var map = L.map('map', {zoomControl: false}).setView([33.5275, -112.2625], 17);
-
+		var map = L.map('map', {zoomControl: false}).setView([33.5270, -112.2629], 17);
 		// create zoom with custom position
 		new L.Control.Zoom({ position: 'topright' }).addTo(map);
-
 		// map base layer
 		L.tileLayer(
 				'http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
@@ -127,15 +103,13 @@
 				,opacity: 1
 				,detectRetina:true
 			}).addTo(map);
-
-		// sort dots to show on top those that have team hashtag
-		dots.sort(function(a,b){ return a.team == 'other' ? -1 : 1; });
-
-		// add circles to the map
+		// add circles with popups to the map
+		var popupTemplate = d3.select('#popup.template').html();	
 		dots.forEach(function(dot){
+			// add circle
 			dot.circle = L.circleMarker([ dot.lat, dot.lon ], {
-				className: 'dot ' + dot.team,
-				// style via css classes
+				className: 'dot team' + (dot.team + 1),
+				// put nulls here to style via css classes
 				fillColor: null,
 				fillOpacity: null,
 				stroke: false,
@@ -143,163 +117,169 @@
 				weight: 0,
 				radius: radius(dot.followers)
 			}).addTo(map);
-
 			// add popup
-			var popup = d3.select('#popup.template').html();
-			for (field in dot)
+			popup = popupTemplate;
+			for (field in dot) {
 				popup = popup.replace('{{' + field + '}}',dot[field]);
-			dot.circle
-				.bindPopup(popup)
-				.on('mouseover',function(){ this.openPopup(); })
-				//.on('mouseout',function(){ this.closePopup(); });
-			d3.select(dot.circle._path).datum(dot);
-
-			// calc time series chart data for different time intercals (actually we will use only quarter for chart and minute for timeslider) 
-			var dotsBy, dotBy;
-			for (period in dotsByPeriod) {
-				dotsBy = dotsByPeriod[period];
-				periodNum = dot[period];
-				if (!dotsBy[periodNum])
-					dotsBy[periodNum] = { total: 0 };
-				if (!dotsBy[periodNum][dot.team])
-					dotsBy[periodNum][dot.team] = 0;
-				dotsBy[periodNum].total++;
-				dotsBy[periodNum][dot.team]++;
 			}
+			if (dot.imageUrl)
+				popup += '<br><br><img src="' + dot.imageUrl + '">';
+			dot.circle
+				.bindPopup(popup, { autoPanPaddingTopLeft: L.Point(0,100) })
+				.on('mouseover',function(){ this.openPopup(); });
+			// put datum for svg path for d3 manipulations
+			d3.select(dot.circle._path).datum(dot);
+			// aggregate data for charts
+			i = dot.chartsPeriod;
+			if (!dots4chart.vol[0][i]) {
+				[0,1].forEach(function(t){
+					dots4chart.vol[t][i] = { x: i, y: 0 };
+					dots4chart.sent[t][i] = { x: i, y: 0, num: 0 };
+				})				
+			}
+			if (dot.team != 2) {
+				dots4chart.sent[dot.team][i].y += dot.sentiments;
+				dots4chart.sent[dot.team][i].num++;
+				dots4chart.vol[dot.team][i].y++;
+			}
+		});
+		var  d3dots = d3.selectAll('.dot')
+		// calc mean sentiment polarity for each chart period
+		for (i in dots4chart.sent[0]) {
+			[0,1].forEach(function(t){
+				dots4chart.sent[t][i].y /= dots4chart.sent[t][i].num;
+				//console.log(i, dots4chart.sent[t][i].y, dots4chart.sent[t][i].num)
+			})	
+		}
+		['vol','sent'].forEach(function(key){
+			[0,1].forEach(function(t){
+				dots4chart[key][t] = d3.values(dots4chart[key][t]);
+			})				
 		})
-
-		for (period in dotsByPeriod)
-			for (var i = 0; i < numOfPeriods[period]; i++)
-				if (!dotsByPeriod[period][i])
-					dotsByPeriod[period][i] = { total: 0 };
-
-		d3dots = d3.selectAll('.dot');
+		dots4chart.vol = d3.values(dots4chart.vol);
+		console.log(dots4chart);
 
 		// make time series
-		var  width = d3.select('#slider').node().clientWidth
-			,height = d3.select('#slider').node().clientHeight
-			,topMargin = 36
-			// arrays for d3 charts
-			,dotsByHourArr = d3.entries(dotsByPeriod.hour)
-			,dotsByMinuteArr = d3.entries(dotsByPeriod.minute)
-			,dotsByQuarterArr = d3.entries(dotsByPeriod.quarter)
-			// scales for d3 charts
+		// sizes from html
+		var  width = d3.select('#charts').node().clientWidth
+			,height1 = d3.select('.chart1').node().clientHeight
+			,height2 = d3.select('.chart2').node().clientHeight
+			// steam chart layout
+			,stack = d3.layout.stack().offset("silhouette")
+			,stackedData = stack(dots4chart.vol)
 			,x = d3.scale.linear()
-				.domain(d3.extent(dotsByQuarterArr, function(d){ return +d.key; }))
-				.range([40, width-40])
-			,y  = d3.scale.linear()
-				.domain([0, d3.max(dotsByQuarterArr, function(d){ 
-					return d3.max(d3.keys(hashtags), function(h) { return d.value[h] || 00;  })
-				})])
-				.range([height - topMargin, 3])
-			,line = {}
-			,chart = d3.select('div.timeline').append('svg')
-				.attr({ width: width, height: height })
-					.append('g').attr('transform','translate(' + 0 + ',' + topMargin + ')')
-			,timeline = chart.append('g').attr('id', 'timeline');
-
-		chart = chart.append('g');
-
-		d3.keys(hashtags).forEach(function(team){
-			line[team] = d3.svg.line()
+				.domain(d3.extent(dots4chart.vol['0'], function(d){ return d.x; }))
+				.range([0, width])
+			,y1  = d3.scale.linear()
+    			.domain([0, d3.max(dots4chart.vol, function(layer) { 
+    				return d3.max(layer, function(d) { return d.y0 + d.y; }); 
+    			})])
+				.range([height1-2, 1])
+			,line1 = d3.svg.line()
 				.interpolate("cardinal")
-				.x(function(d) { return x(+d.key); })
-				.y(function(d) { return y(+d.value[team] || 0); }); 
-			chart.append('path')
-				.datum(dotsByQuarterArr)
-				.attr({ class: 'line ' + team })
-				.attr('d', line[team])
-				//.style('stroke', color(team));
+				.x(function(d) { return x(+d.x); })
+				.y(function(d) { return y1(+d.y || 0); })
+			,area = d3.svg.area()
+				.interpolate("cardinal")
+			    .x(function(d) { return x(d.x); })
+			    .y0(function(d) { return y1(d.y0); })
+			    .y1(function(d) { return y1(d.y0 + d.y); })
+			,chart1 = d3.select('#charts .chart1').append('svg')
+				.attr({ width: width, height: height1 })
+			// sentiments chart
+			,y2  = d3.scale.linear()
+				.domain([ 
+							d3.min([0,1], function(h) { 
+								return d3.min(dots4chart.sent[h], function(d) { return d.y; })
+							}),
+							d3.max([0,1], function(h) { 
+								return d3.max(dots4chart.sent[h], function(d) { return d.y; })
+							})
+						])
+				.domain([-0.2,0.5])
+				.range([height2-1, 1])
+			,line2 = d3.svg.line()
+				.interpolate("cardinal")
+				.x(function(d) { return x(+d.x); })
+				.y(function(d) { return y2(+d.y || 0); })
+			,chart2 = d3.select('#charts .chart2').append('svg')
+				.attr({ width: width, height: height2 })
+		chart2.append('line').attr({ x1: 0, x2: width, y1: y2(0), y2: y2(0), class: 'chartAxis' });
+		chart1.selectAll("path")
+			.data(stackedData)
+			.enter().append('path')
+			.attr('d', area)
+			.attr({ class: function(d, i) {
+				return 'line team' + (i + 1);
+			} });
+		[0,1].forEach(function(team){
+			chart2.append('path')
+				.datum(dots4chart.sent[team])
+				.attr({ class: 'line team' + (team + 1) })
+				.attr('d', line2)
 		})
-
-		// make events timeline
-		var xByMinute = x.copy().domain(d3.extent(dotsByMinuteArr, function(d){ return +d.key; }))
+		// make game events timeline
+		// process events data
+		events.forEach(function(e){ 
+			e.time = moment( e.time );
+			e.team = typeof e.team == 'number' ? e.team : 2;
+			e.sliderPeriod = Math.floor ((e.time - startDate) / sliderPeriod); 
+			e.score && scores.push(e);
+			eventsMap[e.sliderPeriod] = e;
+		});
+		var  timeline = d3.select('#charts .timeline').append('svg')
+				.attr({ width: width, height: 50 })
+				.append('g').attr('transform','translate(' + 0 + ',' + 10 + ')')
+		 	,sliderX = x.copy().domain([0, numOfPeriods])
 			,timelineEvents = timeline.selectAll('g')
 				.data(events).enter()
 				.append('g')
 					.attr('class', function (d){ 
 						d.g = d3.select(this); 
-						return d.type + ' hidden ' + (d.team || ''); 
+						return d.type + ' hidden team' + (d.team + 1) + ' ' + (d.size || ''); 
 					})
 					.attr('transform', function (d){ 
-						return 'translate(' + xByMinute(d.minute) + ',0)'; 
+						return 'translate(' + sliderX(d.sliderPeriod) + ',0)'; 
 					});
-
-		timelineEvents.filter(function(d){ return d.type == 'gameTimes'; })
-			.append('line').attr({ y2: height });
-
-		timelineEvents.append('circle').attr({ r: 4 })
+		qwe=sliderX
+		timelineEvents.append('circle').attr({ r: 6 })
 			.on('mouseover', function(){ d3.select(this.parentNode).classed('hidden', 0); })
 			.on('mouseout', function(){ d3.select(this.parentNode).classed('hidden', 1); });
-
-		timelineEvents.append('text').attr({ dy: '-1.8em' }).text(function(d){ return d.text || d.type; });
-		timelineEvents.append('text').attr({ dy: '-0.6em', class: 'time' }).text(function(d){ return d.time; });
-
-		// make legend bar chart
-		var  width = d3.select('#legend').node().clientWidth
-			,height = d3.select('#legend').node().clientHeight
-			,xBars = d3.scale.linear()
-				.domain([0, d3.max(dotsByQuarterArr, function(d){ 
-					return d3.max(d3.keys(hashtags), function(h) { return d.value[h] || 0; })
-				})])
-				.range([1, width - 64])
-			,barChart=d3.select('#legend').append('svg').append('g')
-				.attr('transform','translate(' + 50 + ',' + 13 + ')');
-
-		bars = barChart.selectAll('g').data(layers).enter().append('g')
-			.attr('class',function(d){return 'bar ' + d; })
-			.attr('transform', function(d,i) { return 'translate(' + 20 + ',' + (i * 18) + ')'; })
-		
-		bars.append('text').attr({ class: 'team', dx: -5, dy: 7 })
-			.text(function(d){ return '#' + d; });
-
-		bars.append('rect').attr({  x: 0, y: 0, height: 6 });
+		timelineEvents.append('text').attr({ dy: '1.8em' }).text(function(d){ return d.text || d.type; });
+		timelineEvents.append('text').attr({ dy: '3em', class: 'time' }).text(function(d){ return formatTime(d.time); });
 
 		// slider init
-		var sliderHandle = d3.select('#slider .handle')
-			,sliderHandleTime = sliderHandle.select('.time')
-			,sliderHandleScore = [ sliderHandle.select('.score .hawks'), sliderHandle.select('.score .patriots') ]
+		var  sliderHandle = d3.select('#slider .handle')
+			,sliderHandleTime = d3.select('.time')
+			,sliderHandleScore = [ d3.select('.score.team1'), d3.select('.score.team2') ]
 			,slider = new Dragdealer('slider', {
-				 steps: numOfPeriods.minute
+				 steps: numOfPeriods
 				,animationCallback: moveSLider
 			})
 			,playButton = d3.select('.playButton').on('click',playClick),
 			isAll = false
 			,curStep;
 
-		// time format for slider handle
-		function formatTime(minute){
-			var hour = (Math.floor(minute / 60) + timezone + 24) % 24;
-			minute = minute % 60;
-			return (hour % 12 == 0 ? 12 : hour % 12) + ':' + (minute < 10 ? '0' : '') + minute + (hour > 11 ? 'pm' : 'am');
-		}
+		// timeline is wider than chart (because of slider width), so use multiplicator
 		// callback when slider handle is dragging
-		function moveSLider(xOffset){
-			var step = Math.round(xOffset * numOfPeriods.minute);
-
+		function moveSLider (xOffset){
 			map.closePopup();
 
-			sliderHandleTime.text( step == numOfPeriods.minute ? 'All' : formatTime( step + startMinute ) );
-
+			var step = Math.round(xOffset * numOfPeriods);
+			sliderHandleTime.text( step == numOfPeriods ? 'All' : formatTime( startDate.valueOf() + step * sliderPeriod ) );
 			// calc current scores
 			var i = scores.length - 1;
-			while ( i >0 && scores[i].minute > step) i--;
-
+			while ( i >0 && scores[i].sliderPeriod > step) i--;
 			var score = scores[i].score.split(':');
-
 			sliderHandleScore[0].text( score[1] );
 			sliderHandleScore[1].text( score[0] );
 
 			// events show
 			timelineEvents.classed('hidden',1);
-			if (eventsMap[step]) {
+			if (eventsMap[step]) 
 				eventsMap[step].g.classed('hidden', 0);
-				slow = 5;
-				console.log(step, eventsMap[step])
-			}
-
 			// change dots style
-			if (step == numOfPeriods.minute && !isAll) {
+			if (step == numOfPeriods && !isAll) {
 				sliderHandle.classed('all', 1);
 				d3dots.classed('dotsAll', 1);
 				isAll == true;
@@ -307,19 +287,15 @@
 				isAll == false;
 				sliderHandle.classed('all', 0);
 				d3dots.classed('dotsAll', 0);
-				d3dots.filter(function(d){ return d.minute == step; }).classed('anima', 1);
-				d3dots.classed('invisible', function(d){ return d.minute > step; });
+				d3dots.filter(function(d){ return d.sliderPeriod == step; }).classed('anima', 1);
+				d3dots.classed('invisible', function(d){ return d.sliderPeriod > step; });
 			}
-
-			// update bar chart
-			bars.selectAll('rect').transition().duration(250)
-				.attr('width', function(d) { return xBars( dotsByPeriod.quarter[Math.floor(step/15)][d] || 0); } )
 		}
 		// start/stop play
 		function playClick(){
 			var isActive = ! playButton.classed('active');
 			if (isActive){
-				if (curStep == numOfPeriods.minute)
+				if (curStep == numOfPeriods)
 					slider.setStep(0)
 				playing = true;
 				play(1);
@@ -337,12 +313,13 @@
 			} else {
 				if (slow) slow--;
 				curStep = slider.getStep()[0];
-				if (curStep != numOfPeriods.minute) {
+				if (curStep != numOfPeriods) {
 					slider.setStep(curStep + 1);
 					setTimeout( function() { play(1); }, 100);
 				} else 
 					playClick();
 			}
 		}
+		playClick();
 	}
 })()
