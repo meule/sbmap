@@ -10,8 +10,10 @@ var sbconfig = {
 	,teamColors: ['#C60C30', '#69BE28']
 	// time frame 
 	,startDate: '2015-02-01T17:30:00-07:00'
-	,endDate: '2015-02-01T23:00:00-07:00'
+	,endDate: '2015-02-02T00:00:00-07:00'
 	,timezone: -7
+	// if timezone is wrong in data.json file
+	,timeCorrection: 7
 	// time period for time slider step, ms
 	,sliderPeriod: 60 * 1000
 	// time period for charts plotting

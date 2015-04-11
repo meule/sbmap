@@ -1,13 +1,11 @@
 (function sbmap(){
-	// just for debug
-	var timeCorrection = window.location.hash.substr(1) || 0;
-
 		// config from sbconfig.js
 		// time format for slider handle
 	var  hashtags = sbconfig.hashtags
 		,startDate = moment(sbconfig.startDate)
 		,endDate = moment(sbconfig.endDate)
 		,timezone = sbconfig.timezone
+		,timeCorrection = sbconfig.timeCorrection
 		,sliderPeriod = sbconfig.sliderPeriod
 		,chartsPeriod = sbconfig.chartsPeriod
 		,events = sbconfig.events
