@@ -3,6 +3,8 @@
 # pip install TextBlob
 # python data_process.py super_bowl_output.json super_bowl_images.csv outline.json
 
+# Sorry for the code quality, just mixed up some code to get result very quickly
+
 import os
 import sys
 import time
