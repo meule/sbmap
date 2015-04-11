@@ -122,11 +122,18 @@
 			for (field in dot) {
 				popup = popup.replace('{{' + field + '}}',dot[field]);
 			}
-			if (dot.imageUrl)
+			if (dot.imageUrl) 
 				popup += '<br><br><img src="' + dot.imageUrl + '">';
 			dot.circle
-				.bindPopup(popup, { autoPanPaddingTopLeft: L.Point(0,100) })
-				.on('mouseover',function(){ this.openPopup(); });
+				.bindPopup(popup)
+				.on('mouseover',function(){ 
+					this.openPopup(); 
+					popup = this.getPopup();
+					console.log(qwe=this)
+					d3.select('.leaflet-popup img').on('load',function(){
+						popup.update();
+					})
+				});
 			// put datum for svg path for d3 manipulations
 			d3.select(dot.circle._path).datum(dot);
 			// aggregate data for charts
@@ -241,7 +248,6 @@
 					.attr('transform', function (d){ 
 						return 'translate(' + sliderX(d.sliderPeriod) + ',0)'; 
 					});
-		qwe=sliderX
 		timelineEvents.append('circle').attr({ r: 6 })
 			.on('mouseover', function(){ d3.select(this.parentNode).classed('hidden', 0); })
 			.on('mouseout', function(){ d3.select(this.parentNode).classed('hidden', 1); });
